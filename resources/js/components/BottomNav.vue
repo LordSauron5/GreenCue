@@ -25,7 +25,7 @@ const rightItems = computed(() => props.items.slice(half.value));
 <template>
     <div
         class="flex items-start justify-around border-t border-ink/7 bg-app-bg/92 pt-3 backdrop-blur-lg"
-        style="padding-bottom: max(12px, env(safe-area-inset-bottom))"
+        style="padding-bottom: max(12px, var(--inset-bottom, 0px))"
     >
         <template v-for="item in leftItems" :key="item.key">
             <Link

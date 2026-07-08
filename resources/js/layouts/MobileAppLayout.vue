@@ -17,7 +17,7 @@ const navItems: BottomNavItem[] = [
 <template>
     <div
         class="flex h-dvh flex-col overflow-hidden bg-app-bg font-body text-ink"
-        style="padding-top: env(safe-area-inset-top)"
+        style="padding-top: var(--inset-top, 0px)"
     >
         <div class="flex-1 overflow-y-auto">
             <slot />
