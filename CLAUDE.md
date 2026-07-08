@@ -1,117 +1,5 @@
 <laravel-boost-guidelines>
-# CLAUDE.md — GreenCue
-
-This file gives Claude Code full context on what GreenCue is and how to build it. Read this before making changes.
-
-## What This App Is
-
-GreenCue is a plant care management app that helps people keep their houseplants alive by removing the guesswork. Users identify a plant (by photo or name), the app auto-fetches its care requirements, and schedules local push notifications for watering, fertilizing, and other recurring care.
-
-It ships as a **native mobile app** built with **NativePHP (Laravel)** — the entire Laravel backend is bundled directly onto the user's device rather than served over the web. There is no traditional server-hosted backend; outbound network calls are only made to the plant-ID/care-data APIs below.
-
-## Core Problem It Solves
-
-Most houseplant owners don't know what species they own, how often it needs water/fertilizer/repotting, or its light/humidity needs. This leads to over/under-watering and plants declining because no one remembered to check on them. GreenCue automates identification and scheduling so the user doesn't have to research any of it themselves.
-
-## Target User
-
-Everyday houseplant owners — not botanists or professional growers — who want a simple, visual way to track their plants and keep them healthy, without relying on a cloud-hosted web app or a spreadsheet.
-
-## Core Features (v1)
-
-### 1. Plant Identification
-- **Photo ID** — snap a picture of the plant, identified via **Pl@ntNet** (primary), falling back to **iNaturalist**
-- **Name search** — manually search for a species by name
-- Confidence-scored match; user must confirm before it's saved as one of their plants
-
-### 2. Automatic Care Instructions
-Once identified, auto-fetch and display the species' care profile via **Perenual** (primary), supplemented by **OpenFarm**:
-- Watering frequency
-- Light requirements
-- Fertilizing schedule
-- Humidity/temperature preferences
-
-### 3. Care Logging & Tracking
-- Log watering, fertilizing, pruning, and repotting events, each with an optional photo
-- Next-due dates recalculate automatically from the care profile whenever an event is logged
-
-### 4. Care Reminders
-- Native **mobile** push notifications for watering, fertilizing, and other recurring tasks
-- Scheduled and adjusted **locally on-device** via NativePHP's native notification bridge — no server round-trip
-
-### 5. Growth Timeline
-- Chronological photo history per plant, built from care-log photos
-
-## Explicitly Out of Scope for v1
-
-**Plant health/disease diagnosis** (photo of a sick plant → diagnosis) is deferred to a future version. Show it as **"Coming Soon"** in the UI. There's no strong free/open API for this yet — likely path is a custom model fine-tuned on the open PlantVillage dataset, later.
-
-## Requirement Constraints
-
-- **Free/open APIs only** for identification and care data — no paid APIs (this ruled out Plant.id in favor of Pl@ntNet/Perenual)
-- Mobile-first UI — single-column layout, bottom navigation, swipe gestures, touch-friendly targets
-- No SSR — Inertia SSR is unnecessary here (no public web/SEO surface) and should stay disabled
-- No authentication/registration — this is a single-user, on-device app with no server-hosted backend to authenticate against. Fortify has been fully removed; `User` is a plain Eloquent model (`name`, `email`) holding the device owner's profile details, not a login-gated account
-- Tailwind v4 features (`@theme`, etc.) may not render on older Android WebViews — flag if targeting low `min_sdk`, may need v3-compatible output for those devices
-- Pin Node to a version that works with `@tailwindcss/oxide` native bindings (Node 20+ has had issues; 18 is safer) to avoid install/build errors
-
-## Tech Stack
-
-| Layer | Choice |
-|---|---|
-| Backend/runtime | Laravel 13 + NativePHP (bundled on-device) |
-| Frontend | Vue 3 (Composition API) + Inertia.js v3 + Tailwind CSS v4 |
-| Starter kit | `laravel/vue-starter-kit` (TypeScript, shadcn-vue), auth/registration scaffolding removed |
-| Auth | None — single-user, on-device app; `User` model just stores profile details |
-| Routing | Laravel Wayfinder (type-safe route generation) |
-| Plant ID | Pl@ntNet (primary), iNaturalist (fallback) |
-| Taxonomy | GBIF |
-| Care data | Perenual (primary), OpenFarm (supplement) |
-| Notifications | NativePHP native local notification bridge |
-| Testing | Pest v4 / PHPUnit v12 |
-| Linting/formatting | Larastan, Pint, ESLint, Prettier |
-
-## Planned Architecture
-
-```
-app/
-├── Models/
-│   ├── Plant.php                  // user's actual plant instance
-│   ├── Species.php                // cached species data, shared across users
-│   └── CareSchedule.php           // watering/fertilizing/etc. cadence per plant
-├── Services/
-│   ├── PlantNet/PlantNetClient.php
-│   ├── Perenual/PerenualClient.php
-│   └── PlantIdentificationService.php   // orchestrates: photo -> ID -> care fetch -> save
-├── Jobs/
-│   └── ScheduleCareRemindersJob.php     // builds/updates local notification schedule
-├── Notifications/
-│   ├── WateringReminder.php
-│   └── FertilizingReminder.php
-└── Http/Controllers/
-    ├── PlantController.php
-    ├── IdentifyController.php
-    └── CareScheduleController.php
-
-resources/js/
-├── pages/Plants/{Index,Identify,Show}.vue
-├── pages/Settings/Notifications.vue
-├── components/{PlantCard,CareScheduleEditor,CameraCapture}.vue
-└── composables/useCamera.js
-```
-
-Key models:
-- `Species` is cached and shared across users to avoid re-fetching ID/care data for the same plant repeatedly.
-- `Plant` belongs to a `User` and a `Species`; holds nickname, photo, identification confidence.
-- `CareSchedule` is one row per care `type` (watering/fertilizing/misting/repotting) per plant, with `interval_days`, `last_done_at`, `next_due_at`.
-
-`PlantIdentificationService` resolves a `Species` from a photo or name, checking the cache first before hitting Pl@ntNet/Perenual.
-
-`ScheduleCareRemindersJob` runs on a schedule and fires NativePHP local notifications for any due `CareSchedule` rows, then advances `next_due_at`.
-
-**Note:** verify the exact NativePHP notification API method signatures against the live docs before implementing — this hasn't been confirmed against the current NativePHP version yet.
-
----
+=== foundation rules ===
 
 # Laravel Boost Guidelines
 
@@ -225,14 +113,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 
 # Deployment
 
-- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications. (Note: not applicable to GreenCue's on-device NativePHP distribution model, but relevant if a companion web dashboard is ever added.)
-
-=== tests rules ===
-
-# Test Enforcement
-
-- Every change must be programmatically tested. Write a new test or update an existing test, then run the affected tests to make sure they pass.
-- Run the minimum number of tests needed to ensure code quality and speed. Use `php artisan test --compact` with a specific filename or filter.
+- Laravel can be deployed using [Laravel Cloud](https://cloud.laravel.com/), which is the fastest way to deploy and scale production Laravel applications.
 
 === inertia-laravel/core rules ===
 
@@ -252,7 +133,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Axios has been removed. Use the built-in XHR client with interceptors, or install Axios separately if needed.
 - `Inertia::lazy()` / `LazyProp` has been removed. Use `Inertia::optional()` instead.
 - Prop types (`Inertia::optional()`, `Inertia::defer()`, `Inertia::merge()`) work inside nested arrays with dot-notation paths.
-- SSR works automatically in Vite dev mode with `@inertiajs/vite` - no separate Node.js server needed during development. **GreenCue does not need SSR** — keep it disabled per the app's on-device, non-public-web nature.
+- SSR works automatically in Vite dev mode with `@inertiajs/vite` - no separate Node.js server needed during development.
 - Event renames: `invalid` is now `httpException`, `exception` is now `networkError`.
 - `router.cancel()` replaced by `router.cancelAll()`.
 - The `future` configuration namespace has been removed - all v2 future options are now always enabled.
