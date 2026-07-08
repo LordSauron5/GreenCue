@@ -16,12 +16,12 @@ const navItems: BottomNavItem[] = [
 
 <template>
     <div
-        class="flex min-h-screen flex-col bg-app-bg font-body text-ink"
+        class="flex h-dvh flex-col overflow-hidden bg-app-bg font-body text-ink"
         style="padding-top: env(safe-area-inset-top)"
     >
         <div class="flex-1 overflow-y-auto">
             <slot />
         </div>
-        <BottomNav :items="navItems" :active="active" />
+        <BottomNav :items="navItems" :active="active" class="flex-none" />
     </div>
 </template>
